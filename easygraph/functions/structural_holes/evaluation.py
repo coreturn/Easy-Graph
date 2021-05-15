@@ -10,7 +10,6 @@ __all__ = [
     'hierarchy'
 ]
 
-
 def mutual_weight(G, u, v, weight=None):
     try:
         a_uv = G[u][v].get(weight, 1)
@@ -47,8 +46,52 @@ def normalized_mutual_weight(G, u, v, norm=sum, weight=None):
             max_nmw_rec[(u,v)] = nmw
             return nmw
 
+<<<<<<< HEAD
+<<<<<<< HEAD
+=======
+def effective_size_parallel(nodes, G, weight):
+=======
+def effective_size_parallel(nodes, G, weight):
+    import time, os
+    #print('Run task %s (%s)...' % (len(nodes), os.getpid()))
+    start = time.time()
+>>>>>>> 17dcc1e... parallel_partial
+    ret = []
+    for node in nodes:
+        neighbors_of_node = set(G.all_neighbors(node))
+        if len(neighbors_of_node) == 0:
+            ret.append([node, float('nan')])
+            continue
+        ret.append([node, sum(redundancy(G, node, u, weight)
+                                for u in neighbors_of_node)])
+<<<<<<< HEAD
+=======
+    end = time.time()
+    #print('Task %s finish %0.2f seconds.' % (len(nodes), (end - start)))
+>>>>>>> 17dcc1e... parallel_partial
+    return ret
+
+def split(nodes, n):
+    ret = []
+    length = len(nodes)  # 总长
+    step = int(length / n) + 1  # 每份的长度
+    for i in range(0, length, step):
+        ret.append(nodes[i:i + step])
+    return ret
+
+def redundancy(G, u, v, weight=None):
+    nmw = normalized_mutual_weight
+    r = sum(nmw(G, u, w, weight=weight) * nmw(G, v, w, norm=max, weight=weight)
+            for w in set(G.all_neighbors(u)))
+    return 1 - r
+<<<<<<< HEAD
+>>>>>>> 880991f... parallel_almost
+
+def effective_size(G, nodes=None, weight=None, n_workers=None):
+=======
 
 def effective_size(G, nodes=None, weight=None):
+>>>>>>> 17dcc1e... parallel_partial
     """Burt's metric - Effective Size.
 
     Parameters
@@ -82,11 +125,6 @@ def effective_size(G, nodes=None, weight=None):
     """
     sum_nmw_rec.clear()
     max_nmw_rec.clear()
-    def redundancy(G, u, v, weight=None):
-        nmw = normalized_mutual_weight
-        r = sum(nmw(G, u, w, weight=weight) * nmw(G, v, w, norm=max, weight=weight)
-                for w in set(G.all_neighbors(u)))
-        return 1 - r
     effective_size = {}
     if nodes is None:
         nodes = G
@@ -103,6 +141,8 @@ def effective_size(G, nodes=None, weight=None):
             else:
                 effective_size[v]=0    
     else:
+<<<<<<< HEAD
+<<<<<<< HEAD
         for v in nodes:
             # Effective size is not defined for isolated nodes
             if len(G[v]) == 0:
@@ -110,8 +150,68 @@ def effective_size(G, nodes=None, weight=None):
                 continue
             effective_size[v] = sum(redundancy(G, v, u, weight)
                                     for u in set(G.all_neighbors(v)))
-    return effective_size
+=======
+        
+        if n_workers is not None:
+            from multiprocessing import Pool
+            from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
+            from functools import partial
+            import random
+            nodes = list(nodes)
+            random.shuffle(nodes)
+            nodes = split(nodes, 4)
+            local_function = partial(effective_size_parallel, G=G, weight=weight)
+            with Pool(4) as p:
+                ret = p.map(local_function, nodes)
+            res = [x for i in ret for x in i]
+            effective_size = dict(res)
+        else:
+            for v in nodes:
+                # Effective size is not defined for isolated nodes
+                if len(G[v]) == 0:
+                    effective_size[v] = float('nan')
+                    continue
+                effective_size[v] = sum(redundancy(G, v, u, weight)
+                                        for u in set(G.all_neighbors(v)))
+>>>>>>> 880991f... parallel_almost
+=======
+        import time
+        start = time.time()
 
+        print("-------pool-----------")
+        from multiprocessing import Pool
+        from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
+        from functools import partial
+        import random
+        nodes = list(nodes)
+        random.shuffle(nodes)
+        nodes = split(nodes, 4)
+        local_function = partial(effective_size_parallel, G=G, weight=weight)
+        with Pool(4) as p:
+            ret = p.map(local_function, nodes)
+        res = [x for i in ret for x in i]
+        effective_size = dict(res)
+
+        # print("--------parallel-------")
+        # from joblib import Parallel, delayed
+        # from functools import partial
+        # local_function = partial(effective_size_parallel, G=G, weight=weight)
+        # res = Parallel(n_jobs=4)(delayed(local_function)([v]) for v in nodes)
+        # effective_size = dict(res)
+
+        # print("--------non parallel-------")
+        # for v in nodes:
+        #     # Effective size is not defined for isolated nodes
+        #     if len(G[v]) == 0:
+        #         effective_size[v] = float('nan')
+        #         continue
+        #     effective_size[v] = sum(redundancy(G, v, u, weight)
+        #                             for u in set(G.all_neighbors(v)))
+        
+        end = time.time()
+        print("use: ", end-start)
+>>>>>>> 17dcc1e... parallel_partial
+    return effective_size
 
 def efficiency(G, nodes=None, weight=None):
     """Burt's metric - Efficiency.
@@ -150,6 +250,32 @@ def efficiency(G, nodes=None, weight=None):
     efficiency = {n: v / degree[n] for n, v in e_size.items()}
     return efficiency
 
+<<<<<<< HEAD
+<<<<<<< HEAD
+=======
+def compute_constraint_of_nodes(nodes, G, weight):
+=======
+def compute_constraint_of_nodes(nodes, G, weight):
+    import time, os
+    print('Run task %s (%s)...' % (len(nodes), os.getpid()))
+    start = time.time()
+>>>>>>> 17dcc1e... parallel_partial
+    ret = []
+    for node in nodes:
+        neighbors_of_node = set(G.all_neighbors(node))
+        if len(neighbors_of_node) == 0:
+            ret.append([node, float('nan')])
+            continue
+        ret.append([node, sum(local_constraint(G, node, u, weight)
+                                for u in neighbors_of_node)])
+<<<<<<< HEAD
+    return ret
+>>>>>>> 880991f... parallel_almost
+=======
+    end = time.time()
+    print('Task %s finish %0.2f seconds.' % (len(nodes), (end - start)))
+    return ret
+>>>>>>> 17dcc1e... parallel_partial
 
 def constraint(G, nodes=None, weight=None, n_workers=None):
     """Burt's metric - Constraint.
@@ -194,6 +320,7 @@ def constraint(G, nodes=None, weight=None, n_workers=None):
     if nodes is None:
         nodes = G.nodes
     constraint = {}
+
     def compute_constraint_of_v(v):
         neighbors_of_v = set(G.all_neighbors(v))
         if len(neighbors_of_v) == 0:
@@ -203,15 +330,57 @@ def constraint(G, nodes=None, weight=None, n_workers=None):
                                 for n in neighbors_of_v)
         return v, constraint_of_v
 
+<<<<<<< HEAD
+<<<<<<< HEAD
+=======
+    import time
+    start = time.time()
+
+>>>>>>> 17dcc1e... parallel_partial
     if n_workers is None:
+        print("------noparallel------")
         constraint_results = []
         for v in nodes:
             constraint_results.append(compute_constraint_of_v(v))
     else:
+<<<<<<< HEAD
         from joblib import Parallel, delayed
         constraint_results = Parallel(n_jobs=n_workers)(delayed(compute_constraint_of_v)(v) for v in nodes)
     for v, constraint_of_v in constraint_results:
         constraint[v] = constraint_of_v
+=======
+    if n_workers is not None:
+=======
+        print("-------pool-----------")
+>>>>>>> 17dcc1e... parallel_partial
+        from multiprocessing import Pool
+        from functools import partial
+        import random
+        local_function = partial(compute_constraint_of_nodes, G=G, weight=weight)
+        nodes = list(nodes)
+        random.shuffle(nodes)
+        nodes = split(nodes, 4)
+        with Pool(4) as p:
+            ret = p.map(local_function, nodes)
+        constraint_results = [x for i in ret for x in i]
+<<<<<<< HEAD
+    else:
+        constraint_results = []
+        for v in nodes:
+            constraint_results.append(compute_constraint_of_v(v))
+
+    constraint = dict(constraint_results)
+>>>>>>> 880991f... parallel_almost
+=======
+
+        # print("-------parallel-----------")
+        # from joblib import Parallel, delayed
+        # constraint_results = Parallel(n_jobs=n_workers)(delayed(compute_constraint_of_v)(v) for v in nodes)
+    
+    end = time.time()
+    print("use: ", end - start)
+    constraint = dict(constraint_results)
+>>>>>>> 17dcc1e... parallel_partial
     return constraint
 
 local_constraint_rec = {}
@@ -227,7 +396,51 @@ def local_constraint(G, u, v, weight=None):
         local_constraint_rec[(u, v)] = result
         return result
 
+<<<<<<< HEAD
+<<<<<<< HEAD
+=======
+def hierarchy_parallel(G, nodes):
+    import time, os
+    print('Run task %s (%s)...' % (len(nodes), os.getpid()))
+    start = time.time()
+    ret = []
+    for v in nodes:
+        E = G.ego_subgraph(v)
+        n=len(E)-1
+        C=0
+        c={}
+        neighbors_of_v = set(G.all_neighbors(v))
+        for w in neighbors_of_v:
+            C+=local_constraint(G,v,w)
+            c[w]=local_constraint(G,v,w)
+        if n > 1:
+            ret.append([v, sum(c[w]/C*n*math.log(c[w]/C*n)/(n*math.log(n)) for w in neighbors_of_v)])
+    end = time.time()
+    print('Task %s finish %0.2f seconds.' % (len(nodes), (end - start)))
+    return ret
+
+>>>>>>> 17dcc1e... parallel_partial
 def hierarchy(G,nodes=None,weight=None):
+=======
+def hierarchy_parallel(nodes, G):
+
+    ret = []
+    for v in nodes:
+        E = G.ego_subgraph(v)
+        n=len(E)-1
+        C=0
+        c={}
+        neighbors_of_v = set(G.all_neighbors(v))
+        for w in neighbors_of_v:
+            C+=local_constraint(G,v,w)
+            c[w]=local_constraint(G,v,w)
+        if n > 1:
+            ret.append([v, sum(c[w] / C * n * math.log(c[w] / C * n) / (n * math.log(n)) for w in neighbors_of_v)])
+
+    return ret
+
+def hierarchy(G,nodes=None,weight=None,n_workers=None):
+>>>>>>> 880991f... parallel_almost
     """Returns the hierarchy of nodes in the graph
 
     Parameters
@@ -255,6 +468,8 @@ def hierarchy(G,nodes=None,weight=None):
     if nodes is None:
         nodes = G.nodes
     hierarchy = {}
+<<<<<<< HEAD
+<<<<<<< HEAD
     con=constraint(G)
     for v in G.nodes:
         E = G.ego_subgraph(v)
@@ -267,5 +482,51 @@ def hierarchy(G,nodes=None,weight=None):
             c[w]=local_constraint(G,v,w)
         if n>1:
             hierarchy[v]=sum(c[w]/C*n*math.log(c[w]/C*n)/(n*math.log(n)) for w in neighbors_of_v)
+=======
+
+    if n_workers is not None:
+        from multiprocessing import Pool
+        from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
+        from functools import partial
+        import random
+        nodes = list(nodes)
+        random.shuffle(nodes)
+        nodes = split(nodes, 4)
+        local_function = partial(hierarchy_parallel, G=G)
+        with Pool(4) as p:
+            ret = p.map(local_function, nodes)
+        res = [x for i in ret for x in i]
+        hierarchy = dict(res)
+    else:
+        for v in G.nodes:
+            E = G.ego_subgraph(v)
+            n=len(E)-1
+            C=0
+            c={}
+            neighbors_of_v = set(G.all_neighbors(v))
+            for w in neighbors_of_v:
+                C+=local_constraint(G,v,w)
+                c[w]=local_constraint(G,v,w)
+            if n>1:
+                hierarchy[v]=sum(c[w]/C*n*math.log(c[w]/C*n)/(n*math.log(n)) for w in neighbors_of_v)
+
+>>>>>>> 880991f... parallel_almost
+=======
+
+    print("-------pool-----------")
+    from multiprocessing import Pool
+    from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
+    from functools import partial
+    import random
+    nodes = list(nodes)
+    random.shuffle(nodes)
+    nodes = split(nodes, 4)
+    local_function = partial(hierarchy_parallel, G=G)
+    with Pool(4) as p:
+        ret = p.map(local_function, nodes)
+    res = [x for i in ret for x in i]
+    hierarchy = dict(res)
+
+>>>>>>> 17dcc1e... parallel_partial
     return hierarchy
 
